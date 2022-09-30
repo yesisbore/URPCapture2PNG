@@ -1,6 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -16,7 +19,17 @@ public class CaptureManager : MonoBehaviour
     private WaitForSeconds _waitTime = new WaitForSeconds(0.1f);
     
     private string Date => DateTime.Now.ToString("yy-MM-dd_hh-mm-ss");
-    private string Path(string fileExt) => Application.dataPath + "/CaptureFiles/capture_" + Date + "." + fileExt;
+    private string CaptureFolder => Application.dataPath + "/CaptureFiles";
+    private string Path(string fileExt)
+    {
+#if UNITY_EDITOR
+        if (!AssetDatabase.IsValidFolder(CaptureFolder))
+        {
+            AssetDatabase.CreateFolder("Assets", "CaptureFiles");
+        }
+#endif
+        return CaptureFolder + "/capture_" + Date + "." + fileExt;
+    }
     private Rect _screenRect = new Rect(0f, 0f, Screen.width, Screen.height);
     
     #endregion Variables

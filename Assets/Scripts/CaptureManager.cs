@@ -8,9 +8,16 @@ public class CaptureManager : MonoBehaviour
 {
     #region Variables
 
+    public KeyCode CaptureJPG = KeyCode.J;
+    public KeyCode CapturePNG = KeyCode.P;
+    
     private Camera _camera;
-
-    private static int _captureCount = 0;
+    private bool _isCapturing = false;
+    private WaitForSeconds _waitTime = new WaitForSeconds(0.1f);
+    
+    private string Date => DateTime.Now.ToString("yy-MM-dd_hh-mm-ss");
+    private string Path(string fileExt) => Application.dataPath + "/CaptureFiles/capture_" + Date + "." + fileExt;
+    private Rect _screenRect = new Rect(0f, 0f, Screen.width, Screen.height);
     
     #endregion Variables
 
@@ -32,26 +39,53 @@ public class CaptureManager : MonoBehaviour
 
     private void Capture()
     {
-        if (!Input.GetKey(KeyCode.Space)) return;
+        if (_isCapturing) return;
         
-        var path = Application.dataPath + "/CaptureFiles/capture" + _captureCount++ + ".png";
-        StartCoroutine(Co_Capture(path));
+        if (Input.GetKey(CaptureJPG))
+        {
+            _isCapturing = true;
+
+            StartCoroutine(CO_CaptureJPG());
+        }
+        else if (Input.GetKey(CapturePNG))
+        {
+            _isCapturing = true;
+
+            StartCoroutine(CO_CapturePNG()); 
+        }
     } // End of CaptureScreen
 
-    private IEnumerator Co_Capture(string path)
+    private IEnumerator CO_CaptureJPG()
     {
-        if (path == null) yield break;
+        yield return new WaitForEndOfFrame();
+        
+        System.IO.File.WriteAllBytes(Path("jpg"), GetBytesJPG());
+        
+        yield return StartCoroutine(CO_WaitForRecurring());
+    } // End of CO_CaptureJPG
+    
+    private byte[] GetBytesJPG() => CaptureView(_screenRect).EncodeToJPG();
+    
+    private IEnumerator CO_CapturePNG()
+    {
+        _isCapturing = true;
 
         yield return new WaitForEndOfFrame();
 
-        var rect = new Rect(0f, 0f, Screen.width, Screen.height);
-        var texture = CaptureScreen(Camera.main, rect);
+        var texture = CaptureScreen(Camera.main, _screenRect);
 
         var bytes = texture.EncodeToPNG();
-        System.IO.File.WriteAllBytes(path, bytes);
-        Debug.Log("캡쳐 완료");
+        System.IO.File.WriteAllBytes(Path("png"), bytes);
+
+        yield return StartCoroutine(CO_WaitForRecurring());
     } // End of C0_Capture
 
+    private IEnumerator CO_WaitForRecurring()
+    {
+        yield return _waitTime;
+        Debug.Log("캡쳐 완료");
+        _isCapturing = false;
+    }
     private Texture2D CaptureScreen(Camera camera, Rect pRect)
     {
         Texture2D capture;
